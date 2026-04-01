@@ -1,220 +1,138 @@
-# USERJOURNEY.md — TreasuryManager V2 Staking Integration (Job 20)
-
-## Overview
-
-This document describes the step-by-step user journey for the TreasuryManager V2 staking integration. The primary actor is the **AMI Operator** (the wallet assigned as operator), who manages the treasury's ₸USD positions through staking.
+# USERJOURNEY.md — TreasuryManager V2
 
 ## Actors
 
-- **AMI Operator**: Controls staking/unstaking, buybacks, burns, rebalancing. Has a configured operator wallet.
-- **Owner**: Can change operator, update caps, set slippage. The owner is the client wallet.
-- **Permissionless User**: Anyone can call `permissionlessRebalance` — no special role needed.
+1. **Owner** (client: 0x9ba58Eea1Ea9ABDEA25BA83603D54F6D9A01E506) — full control, bypasses caps
+2. **Operator** — daily operations with caps & cooldowns
+3. **Anyone** (permissionless) — rebalance with immutable constraints
 
 ---
 
-## Happy Path — Stake ₸USD
+## Happy Paths
 
-### Step 1: Connect Wallet
-- User lands on TreasuryManager V2 dashboard
-- Clicks "Connect Wallet"
-- MetaMask / WalletConnect popup appears
-- User approves
+### Owner: Set Up Treasury
+1. Owner deploys TreasuryManager → owner = msg.sender
+2. Owner calls `setOperator(operatorAddress)` to assign operator
+3. Owner calls `registerToken(tokenAddr, v3Pool, v4PoolId, isV4)` for each token to track
+4. Owner optionally calls `appendPool(token, ...)` to add additional swap pools
+5. Owner sends ETH to the contract (receives via `receive()`)
 
-### Step 2: Verify Operator Status
-- Dashboard reads `isOperator(msg.sender)` from contract
-- If not operator: shows "Operator access required" — only staking pool data visible
-- If operator: full dashboard unlocks
+### Operator: Buy Tokens with ETH
+1. Operator calls `buyTokenWithETH(tokenAddr, wethAmount, poolNumber)` with `msg.value = wethAmount`
+2. Contract wraps ETH → WETH, swaps through registered pool
+3. Tokens received are tracked: `totalWeiSpent[token] += wethAmount`, `totalTokensReceived[token] += received`
+4. `initialBalanceSnapshot[token]` is updated: `snapshot += received` (dynamic snapshot)
+5. Event `BuyToken(token, wethSpent, tokensReceived, poolNumber, caller)` emitted
 
-### Step 3: View Pool Options
-- Frontend fetches available pool IDs from staking contract
-- Displays pool list with estimated APY (if available from staking contract)
-- Operator selects target pool from dropdown
+### Operator: Buyback ₸USD
+1. Operator calls `buybackWithWETH(amountIn)` — WETH → ₸USD swap
+2. Contract checks operator caps (per-action + daily) with rolling 24h window
+3. Contract checks 60-min cooldown since last operator action
+4. Swap executes through ₸USD V3 pool
+5. ₸USD stays in contract
 
-### Step 4: Enter Stake Amount
-- Operator enters amount of ₸USD to stake
-- Frontend shows:
-  - Current ₸USD balance
-  - Amount being staked
-  - Estimated pool share after staking
-  - Transaction preview
+### Operator: Stake ₸USD
+1. Operator calls `stake(amount, poolId)`
+2. Contract checks STAKE caps and cooldown
+3. Contract approves staking contract for ₸USD amount
+4. Calls `staking.deposit(amount, poolId)`
+5. Event `Stake(amount, poolId, caller)` emitted
 
-### Step 5: Approve ₸USD (if needed)
-- If `allowance(operator, treasuryManager) < amount`:
-  - "Approve" button appears (only button shown — no Execute yet)
-  - Operator clicks "Approve"
-  - MetaMask pops up for approval tx
-  - Button disabled during pending tx
-- Once approved: "Stake" button appears
+### Operator: Unstake ₸USD
+1. Operator calls `unstake(amount, poolId)`
+2. No caps, no cooldown (unrestricted withdrawal)
+3. Calls `staking.withdraw(amount, poolId)`
+4. ₸USD returns to TreasuryManager
+5. Event `Unstake(amount, poolId, caller)` emitted
 
-### Step 6: Execute Stake
-- Operator clicks "Stake"
-- MetaMask popup for `stake(amount, poolNumber)` tx
-- Spinner + disabled button during pending
-- On confirmation: success toast, balance updates
+### Operator: Rebalance Token → ₸USD
+1. Operator calls `rebalance(token, amount, poolNumber)`
+2. Contract checks ROI or Market Cap gates (no inactivity required for operator)
+3. Contract checks caps, cooldown, unlock limits
+4. Atomic 3-leg swap: Token → WETH → 25% USDC to owner + 75% WETH → ₸USD
+5. If meaningful (≥2% of balance): updates inactivity timestamp, resets Path 3 drip
 
-### Step 7: Verify
-- User's staked position updates in staking contract view
-- `StakeExecuted` event appears in transaction history
+### Permissionless: Rebalance
+1. Anyone calls `permissionlessRebalance(token, amount, poolNumber)`
+2. Contract checks:
+   - Token is registered
+   - 4-hour per-token cooldown passed
+   - Daily cap (2 ETH/day per token, rolling 24h window)
+3. Snapshot taken if first interaction
+4. All 3 unlock paths evaluated, max taken, ratcheted up
+5. Amount must be within unlocked allowance minus already-rebalanced
+6. Same 3-leg atomic swap with 3% slippage
+7. Post-swap: WETH received ≤ 0.5 ETH checked
+8. Path 3 drip timer reset
 
----
-
-## Happy Path — Unstake ₸USD
-
-### Step 1: Connect Wallet (if not already connected)
-
-### Step 2: Select Pool to Unstake
-- Dropdown shows pools where operator has a balance
-- Selecting pool fetches: staked amount + estimated rewards from staking contract
-
-### Step 3: Review Unstake
-- Shows: staked amount + rewards to be withdrawn
-- Note: unstake withdraws FULL balance — no partial unstake
-- Shows transaction preview
-
-### Step 4: Execute Unstake
-- "Unstake" button (no approval needed — staking contract pulls from TM)
-- MetaMask popup for `unstake(poolNumber)` tx
-- On confirmation: success toast, position cleared
-
----
-
-## Happy Path — Buyback with WETH
-
-### Step 1: Operator enters WETH amount
-- Input field: "WETH Amount"
-- Shows: operator's WETH balance, current ₸USD price from TWAP
-
-### Step 2: Check Caps
-- Frontend reads `operatorDailyUsed` and `operatorDayStart` from contract
-- If `block.timestamp - operatorDayStart > 24 hours`: usage reset shown as $0 / $2 ETH
-- Warns if amount would exceed daily cap
-
-### Step 3: Check Cooldown
-- Reads last action timestamp
-- If < 60 minutes ago: shows countdown timer, button disabled
-
-### Step 4: Execute Buyback
-- "Buyback" button appears (only button)
-- On click: `buybackWithWETH(amount)` call
-- Shows spinner during tx
-- On success: ₸USD balance increases, WETH decreases
-
----
-
-## Happy Path — Permissionless Rebalance (Anyone)
-
-### Step 1: Any user views dashboard
-- Does NOT require wallet connection to view state
-- Shows current ROI vs unlock threshold
-- Shows ₸USD unlock % based on ROI + time
-
-### Step 2: User verifies unlock conditions
-- ROI ≥ 1000% check displayed (with current ROI calculation)
-- 14-day inactivity check displayed
-- Circuit breaker status shown
-
-### Step 3: User executes rebalance
-- User connects any wallet
-- Enters token + amount
-- Provides paths (or uses auto-computed paths)
-- Executes `permissionlessRebalance(token, amount, pathToWETH, pathToUSDC)`
-- 75% → ₸USD, 25% → designated address (shown in UI)
+### Owner: Emergency Overrides
+1. `ownerRebalance(token, amount, poolNumber)` — bypasses caps/cooldown/ROI/mcap gates
+2. `ownerBuybackWithWETH(amountIn)` — bypasses caps/cooldown
+3. `ownerBuybackWithUSDC(amountIn)` — bypasses caps/cooldown
+4. `transferOwnership(newOwner)` — two-step Ownable2Step
 
 ---
 
 ## Edge Cases
 
 ### Wrong Network
-- If user is not on Base: "Switch to Base" button shown
-- Only that button shown — no other actions accessible
+- User connects to wrong chain → frontend shows "Switch to Base" button
+- All contract interactions fail gracefully with wrong chain
 
 ### Insufficient Balance
-- If WETH amount > operator's WETH balance: button disabled, "Insufficient WETH" shown
-- Same for ₸USD staking vs ₸USD balance
+- Operator tries buyback with insufficient WETH → reverts with clear error
+- Operator tries stake with insufficient ₸USD → reverts
 
-### Cooldown Active
-- If 60-min cooldown not elapsed since last operator action:
-  - "Next action available in X:XX" countdown timer
-  - All action buttons disabled
-  - Exact unlock timestamp shown
+### Cooldown Not Passed
+- Operator tries action within 60 min of last → reverts "Cooldown active"
+- Permissionless tries within 4 hours of last for same token → reverts
 
-### Daily Cap Exceeded
-- If daily cap (2 ETH) would be exceeded:
-  - Shows remaining: "0.3 ETH remaining of 2 ETH daily cap"
-  - Button disabled with "Daily cap reached" label
-  - Shows reset time (when 24h window expires)
+### Cap Exceeded
+- Operator exceeds per-action cap → reverts "Exceeds per-action cap"
+- Operator exceeds daily cap → reverts "Exceeds daily cap"
+- Rolling 24h window: if 24 hours passed since dayStart, usage resets automatically
 
-### Circuit Breaker Triggered
-- If ₸USD spot > 15% above 24h TWAP:
-  - All permissionless rebalance buttons disabled
-  - Shows: "Circuit breaker active — ₸USD price elevated"
-  - Explains: protection against sandwich attacks
+### No Unlock Path Valid
+- Permissionless rebalance when no path qualifies → reverts "No unlock path valid"
+- ROI below 1000% AND market cap below $100M AND Path 3 not triggered
 
-### ROI Below Unlock Threshold
-- If ROI < 1000%: shows current ROI %, progress toward 1000%
-- Stake/unstake still works (unlock is for SELLING/REBALANCING unlocked tokens)
-- Explanation shown in UI
+### Slippage Exceeded
+- Any swap hop receives less than minimum → entire tx reverts "Slippage exceeded"
+- Zero output on any hop → reverts "Zero output"
 
-### Pool Not Found (Unstake)
-- If operator selects a pool with 0 balance: warning shown
-- "Unstake" button still available (will withdraw 0 + any future rewards)
+### Oracle Failure
+- Chainlink stale (>1 hour) → falls back to USDC/WETH pool price
+- Both fail → reverts (no silent fallback to bad data)
 
-### Stale Pool Index (bot — V4 only)
-- If forced poolId provided but not in local index:
-  - Bot fails fast with error
-  - Logs: "Pool {poolId} not found in index"
-  - No silent fallback
-
-### RPC Timeout (bot)
-- If quote call exceeds 5s: timeout error shown
-- Bot retries with exponential backoff
-- Max 3 retries before failing with clear error
+### No Wallet Connected
+- Frontend shows "Connect Wallet" button (not text)
+- All action buttons hidden until connected + correct network
 
 ---
 
-## Dashboard Layout (Suggested)
+## Frontend Flow
 
+### Four-State Button
 ```
-┌─────────────────────────────────────────────────────────┐
-│  🏦 ₸USD Treasury Manager — Operated by AMI            │
-│  Network: Base ✓ | Wallet: 0x...1234 [disconnect]       │
-├─────────────────────────────────────────────────────────┤
-│                                                         │
-│  [STAKING]  [BUYBACK]  [BURN]  [REBALANCE]  [PERMISSIONSLESS] │
-│                                                         │
-│  ┌─ STAKING ─────────────────────────────────────────┐ │
-│  │ Pool: [▼ Select Pool]                             │ │
-│  │ Your staked: 50,000 ₸USD (Pool 3)                 │ │
-│  │ Est. rewards: 1,234 ₸USD                          │ │
-│  │                                                  │ │
-│  │ Amount: [________] ₸USD  (Balance: 120,000)      │ │
-│  │                                                  │ │
-│  │ [STAKE ₸USD]           [UNSTAKE]                  │ │
-│  └──────────────────────────────────────────────────┘ │
-│                                                         │
-│  ┌─ CAPACITY ────────────────────────────────────────┐ │
-│  │ Daily cap: 0.8 / 2.0 ETH                          │ │
-│  │ Resets in: 4h 23m                                 │ │
-│  │ Cooldown: Ready now ✓  /  14h 12m until unlock   │ │
-│  └──────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────┘
+1. Not connected  → Connect Wallet button
+2. Wrong network  → Switch to Base button
+3. Needs approval → Approve button (if token approval needed)
+4. Ready          → Action button (Buy/Stake/Rebalance/etc.)
 ```
 
----
+### Dashboard
+- Contract ETH/WETH balance
+- ₸USD balance (in contract + staked)
+- All registered tokens with balances
+- Cost basis per token (avg cost, current price, ROI)
+- Unlock percentages per token (all 3 paths)
+- Operator caps status (used/remaining)
+- Recent events
 
-## Contract Addresses
-
-| Contract | Address |
-|----------|---------|
-| TreasuryManager v2 | TBD (deploy) |
-| Staking Contract | `0x2a70a42BC0524aBCA9Bff59a51E7aAdB575DC89A` |
-| ₸USD | TBD (confirm from client) |
-| WETH | `0x4200000000000000000000000000000000000006` |
-| USDC | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
-| Universal Router | `0x6fF5693b99212Da76ad316178A184AB56D299b43` |
-| PoolManager | `0x498581ff718922c3f8e6a244956af099b2652b2b` |
-| V4 Quoter | `0x0d5e0F971ED27FBfF6c2837bf31316121532048D` |
-
-## Client (Owner)
-
-`0x9ba58Eea1Ea9ABDEA25BA83603D54F6D9A01E506`
+### Admin Panel (Owner only)
+- Set operator
+- Register/append token pools
+- Update operator caps
+- Update slippage
+- Owner overrides (buyback, rebalance)
+- Transfer ownership

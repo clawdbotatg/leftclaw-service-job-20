@@ -1,0 +1,12 @@
+node_modules/
+.next/
+out/
+packages/foundry/out/
+packages/foundry/cache/
+packages/foundry/broadcast/
+.env
+*.log
+.yarn/cache/
+.yarn/install-state.gz
+.yarn/cache/
+.yarn/install-state.gz

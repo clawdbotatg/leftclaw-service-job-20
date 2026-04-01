@@ -1,152 +1,103 @@
-# PLAN.md — TreasuryManager V2 Staking Integration (Job 20)
+# PLAN.md — TreasuryManager V2: Staking Integration Build
+
+## Job ID: 20
+## Client: 0x9ba58Eea1Ea9ABDEA25BA83603D54F6D9A01E506
+## Chain: Base (8453)
+
+---
 
 ## Overview
 
-TreasuryManager V2 is an onchain treasury management contract for ₸USD (TurboUSD) on Base, operated by AMI (Artificial Monetary Intelligence). This job (Job 20) is the staking integration build — primary focus on the staking UI flow and integration with the ₸USD staking contract.
+TreasuryManager V2 is an onchain treasury management system for ₸USD (TurboUSD) on Base, operated by AMI. It enforces strictly one-directional token flows: ERC20s are bought with ETH/WETH, accumulated, then rebalanced back into ₸USD (75%) and USDC to owner (25%). ₸USD can only be bought, staked, burned — never sold. Three independent permissionless fallback paths guarantee treasury funds are never stuck. Deployed as a 3-contract system to stay within the 24KB contract size limit.
 
-The contract itself follows the same spec as TreasuryManager v2 (same as job 9). This job delivers the staking integration features: `stake()` and `unstake()` functions with a staking-focused frontend.
+## Clarifications (confirmed by client)
 
-## What Was Confirmed By Client (from job messages)
+1. **initialBalanceSnapshot**: Dynamic — taken at first interaction, updates on every new buy. `snapshot += newBuyAmount`. Unlock % calculated against `currentBalance` (which includes new buys).
 
-1. **`initialBalanceSnapshot` behavior**: Dynamic. Updates on every new buy. `snapshot += newBuyAmount`. Unlock % always calculated against `currentBalance` (which already reflects new buys). This means buys increase how much can be sold proportionally — the cap scales with what the operator actually holds.
+2. **buyTokenWithETH(address token, uint256 amount, uint256 poolNumber)**: `amount` = WETH INPUT (exactInput style — how much ETH/WETH to spend). `poolNumber` = staking pool ID.
 
-2. **`buyTokenWithETH(address token, uint256 amount, uint256 poolNumber)` signature confirmed**: `amount` = WETH to spend (input amount, exactInput style). The `poolNumber` (poolId) is used for staking pool selection.
+3. **Daily cap reset**: Rolling 24-hour window from `block.timestamp`. If `block.timestamp - dayStart > 24 hours`: reset usage to 0, set new dayStart. NOT calendar-aligned.
 
-3. **Daily cap reset**: Rolling 24-hour window from `block.timestamp`, not calendar-aligned.
-   ```solidity
-   if (block.timestamp - operatorDayStart[operator] > 24 hours) {
-       operatorDailyUsed[operator] = 0;
-       operatorDayStart[operator] = block.timestamp;
-   }
-   ```
+## Architecture
 
-## Smart Contract — TreasuryManager V2
+### Contract 1: TreasuryManager.sol (Core)
+- State storage, access control, cap enforcement
+- Owner/Operator/Permissionless function entry points
+- Delegates swap execution to SwapHelper library
+- Delegates unlock path calculations to PermissionlessModule library
 
-### Immutable State
-- WETH: `0x4200000000000000000000000000000000000006`
-- USDC: `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`
-- ₸USD: `0xCb8d2C6229FA4a7D96B242345551E562e0e2FC76` (to confirm from client)
-- Official ₸USD/WETH Uniswap V3 pool (to confirm from client)
-- Staking contract: `0x2a70a42BC0524aBCA9Bff59a51E7aAdB575DC89A`
-- Universal Router: `0x6fF5693b99212Da76ad316178A184AB56D299b43`
-- PoolManager: `0x498581ff718922c3f8e6a244956af099b2652b2b`
-- V4 Quoter: `0x0d5e0F971ED27FBfF6c2837bf31316121532048D`
+### Contract 2: SwapHelper.sol (Library)
+- Pure library, no state, delegatecall only
+- Handles all Uniswap Universal Router interactions (V3 + V4)
+- 3-leg atomic rebalance (token→WETH→25% USDC to owner + 75% ₸USD)
+- Buyback execution (WETH/USDC → ₸USD)
+- BuyToken execution (WETH → ERC20)
 
-### Permissionless Constants (hardcoded, never changeable)
-- 3% slippage
-- 4h cooldown (permissionless)
-- 5% max per swap of unlocked
-- 15% circuit breaker vs 24h TWAP
-- 14-day operator inactivity period
-- 90-day dead pool threshold
-- 60-min operator cooldown
-- 0.5 ETH per action cap
-- 2 ETH per day cap
+### Contract 3: PermissionlessModule.sol (Library)
+- Pure library, no state, delegatecall only
+- Path 1: ROI-based unlock (1000% threshold, 25% base + 5% compounding tranches)
+- Path 2: Market cap-based unlock ($100M threshold, 20% base + 5% flat tranches)
+- Path 3: Emergency drip (180-day trigger, then 5% every 60 days)
+- Oracle reads (Chainlink ETH/USD + USDC/WETH fallback)
+- Spot price reads (V3 slot0 + V4 getSlot0)
 
-### Operator Caps (owner-configurable)
-- BuybackWETH: 0.5 ETH/action, 2 ETH/day
-- BuybackUSDC: 2000/action, 5000/day
-- Burn: 100M ₸USD/action, 500M/day
-- Stake: 100M ₸USD/action, 500M/day
-- Rebalance: uses BuybackWETH caps on 100% of input
+## Key Features
 
-### Owner-Only Functions
-- `setOperator(address)` — set AMI operator
-- `updateCaps(ActionType, perAction, perDay)` — change operator caps
-- `setSlippage(uint256 bps)` — operator slippage only
-- `rescueDeadPoolToken(address token, bytes path)` — only after 90+ days of dead pool
+### Dynamic Snapshot Tracking
+- `initialBalanceSnapshot[token]` set on first interaction
+- Updated on every `buyTokenWithETH`: `snapshot += newBuyAmount`
+- Unlock % calculated against current token balance (accounts for new buys)
 
-### Operator-Only Functions
-- `buybackWithWETH(uint256 amountIn)` — WETH → ₸USD via official pool. BuybackWETH caps. 60-min cooldown.
-- `buybackWithUSDC(uint256 amountIn)` — USDC → WETH → ₸USD via official pool. BuybackUSDC caps. 60-min cooldown.
-- `burn(uint256 amount)` — partial burn of ₸USD. Burn caps. 60-min cooldown.
-- `stake(uint256 amount, uint256 poolNumber)` — deposit ₸USD to staking contract. Stake caps. 60-min cooldown. `poolNumber` selects the poolId in the staking contract.
-- `unstake(uint256 poolNumber)` — withdraw full balance + rewards from staking pool. No caps, no cooldown.
-- `buyTokenWithETH(address token, uint256 amount, bytes path)` — ETH → ERC20 via Universal Router. `amount` = WETH to spend. Path validated starts with WETH. Records cost basis via balanceOf delta.
-- `rebalance(address token, uint256 amount, bytes pathToWETH, bytes pathToUSDC)` — 75% → WETH → ₸USD via official pool (stays in contract). 25% → USDC to designated address. BuybackWETH caps on full input. 60-min cooldown.
+### buyTokenWithETH with WETH Input + poolNumber
+- `buyTokenWithETH(address token, uint256 amount, uint256 poolNumber)`
+- `amount` = WETH to spend (exactInput semantics)
+- `poolNumber` = index into registered pools for that token
+- Operator-only, uncapped, tracks cost basis
 
-### Permissionless Function
-- `permissionlessRebalance(address token, uint256 amount, bytes pathToWETH, bytes pathToUSDC)` — anyone can call. Guarantees ₸USD buybacks continue regardless of operator status.
+### Rolling 24h Daily Cap Windows
+- `operatorDayStart[capKey]` tracks when current window started
+- On each action: if `block.timestamp - dayStart > 24 hours`, reset usage to 0 and set new dayStart
+- Same pattern for permissionless per-token caps
 
-**Unlock Conditions (both required):**
-1. ROI ≥ 1000% vs weighted average cost, measured via 24h TWAP from token's Uniswap pool
-2. No operator rebalance for 14 days since current ROI tier was first reached
+### Staking Integration
+- `stake(uint256 amount, uint256 poolId)` — deposit ₸USD to staking contract
+- `unstake(uint256 amount, uint256 poolId)` — withdraw ₸USD from staking
+- Uses ₸USD Staking Contract at 0x2a70a42BC0524aBCA9Bff59a51E7aAdB575DC89A
+- `deposit(uint256 _amount, uint256 poolId)` selector: 0xe2bbb158
+- `withdraw(uint256 _amount, uint256 poolId)` selector: 0x441a3e70
 
-**Unlock Schedule (ratcheted, never decreases):**
-- 1000% ROI: 25% unlocked
-- Each additional 10% above: 5% of remaining locked unlocks
+### Permissionless Rebalance (3 paths)
+- Path 1: ROI ≥ 1000% + 14-day inactivity
+- Path 2: Market cap ≥ $100M + 14-day inactivity
+- Path 3: Emergency drip after 180 days inactivity
+- Immutable caps: 0.5 ETH/action, 2 ETH/day, 3% slippage, 4h cooldown
+- Ratchet: unlock % only goes up, never down
 
-**Execution Rules:**
-- Max 5% of unlocked per tx
-- 4h cooldown per token
-- Circuit breaker: ₸USD spot vs 24h TWAP from official pool, blocks if spot >15% above TWAP
-- Hardcoded caps: 0.5 ETH/action, 2 ETH/day
-- Hardcoded 3% slippage
-- Path validated
+## Hardcoded Addresses (Base)
+- TUSD: 0x3d5e487B21E0569048c4D1A60E98C36e1B09DB07
+- TUSD_POOL: 0xd013725b904e76394A3aB0334Da306C505D778F8
+- USDC: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+- WETH: 0x4200000000000000000000000000000000000006
+- STAKING: 0x2a70a42BC0524aBCA9Bff59a51E7aAdB575DC89A
+- Chainlink ETH/USD: verified on Base at build time
+- Universal Router: verified on Base at build time
+- USDC/WETH pool: verified canonical 0.05% V3 pool on Base
+- V4 PoolManager: Uniswap V4 singleton on Base
 
-## Architecture Decisions
+## Stack
+- Solidity 0.8.26
+- Foundry (forge test, fuzz, fork tests against Base)
+- Scaffold-ETH 2 (frontend)
+- Uniswap Universal Router (V3 + V4 swaps)
+- Chainlink ETH/USD oracle
+- IPFS deployment via bgipfs
 
-### Dynamic Balance Snapshot
-The `initialBalanceSnapshot` is NOT static. Every time a new buy for a token occurs:
-```
-snapshot = snapshot + newBuyAmount
-```
-The unlock percentage is always computed against `currentBalance`, which already reflects new buys. This means buys increase how much can be sold proportionally.
-
-### Staking Pool Discovery
-`poolNumber` in `stake()` and `unstake()` corresponds directly to `poolId` in the staking contract at `0x2a70a42BC0524aBCA9Bff59a51E7aAdB575DC89A`. The frontend should display available pools and let the operator select one.
-
-### Cost Basis Tracking
-Only tracks tokens bought via `buyTokenWithETH`. Unsolicited transfers are ignored. Cost basis computed via `balanceOf` deltas (handles fee-on-transfer and rebasing tokens).
-
-### Daily Cap — Rolling Window
-Rolling 24-hour window from `block.timestamp` of first action in period. When window expires, usage resets to 0 and new window starts.
-
-## Frontend — Staking Integration Focus
-
-The UI should prioritize:
-1. **Staking panel** — select pool, enter amount, stake ₸USD
-2. **Unstake panel** — select pool, view estimated rewards, unstake full balance
-3. **Pool discovery** — fetch available poolIds from staking contract
-4. **Operator dashboard** — view caps, cooldowns, daily usage
-
-Standard TM v2 panels (buyback, burn, rebalance) are secondary.
-
-## Tech Stack
-
-- **Contracts:** Foundry
-- **Frontend:** Scaffold-ETH 2 (Next.js)
-- **Network:** Base mainnet (chain 8453)
-- **UI library:** Scaffold-ETH UI components + custom staking components
-
-## Client Wallet (Owner/Admin)
-
-`0x9ba58Eea1Ea9ABDEA25BA83603D54F6D9A01E506`
-
-All constructor args, `transferOwnership`, `setOperator` calls must use this address. Never hardcode — read from job data.
-
-## Build Pipeline
-
-1. `create_repo` ✅ (done)
-2. `create_plan` ← THIS FILE
-3. `create_user_journey`
-4. `prototype` (Phase 1: local fork, Phase 2: live contracts + local UI, Phase 3: IPFS)
-5. `contract_audit`
-6. `contract_fix`
-7. `deep_contract_audit` (if complex)
-8. `deep_contract_fix`
-9. `frontend_audit`
-10. `frontend_fix`
-11. `full_audit`
-12. `full_audit_fix`
-13. `deploy_contract`
-14. `livecontract_fix`
-15. `deploy_app`
-16. `liveapp_fix`
-17. `liveuserjourney`
-18. `readme`
-19. `ready`
-
-## ethskills.com
-
-Follow https://ethskills.com exactly. Fetch relevant skills before each stage.
+## Security
+- ReentrancyGuard on every external-calling function
+- CEI pattern throughout
+- Balance deltas for all token accounting (fee-on-transfer safe)
+- Output validation after every swap hop
+- Chainlink staleness check (1 hour)
+- Ownable2Step for safe ownership transfer
+- Immutable permissionless parameters (owner can't change)
+- Multiply before divide (no precision loss)
