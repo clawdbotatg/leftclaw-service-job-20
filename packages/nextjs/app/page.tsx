@@ -122,7 +122,7 @@ const Home: NextPage = () => {
                   </div>
                   <div>
                     <span className="text-base-content/60">₸USD:</span>
-                    <span className="ml-2 font-mono text-xs">0xcb8D...c76</span>
+                    <span className="ml-2 font-mono text-xs">0x3d5e...B07</span>
                   </div>
                   <div>
                     <span className="text-base-content/60">Slippage:</span>

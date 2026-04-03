@@ -10,6 +10,7 @@ export const RebalancePanel = () => {
   const [token, setToken] = useState("");
   const [amount, setAmount] = useState("");
   const [mode, setMode] = useState<"operator" | "permissionless">("permissionless");
+  const [error, setError] = useState<string | null>(null);
 
   const { data: isOperator } = useScaffoldReadContract({
     contractName: "TreasuryManagerV2",
@@ -33,6 +34,16 @@ export const RebalancePanel = () => {
 
   const handleRebalance = async () => {
     if (!token || !amount) return;
+    const parsed = Number(amount);
+    if (isNaN(parsed) || parsed <= 0) {
+      setError("Enter a valid positive number");
+      return;
+    }
+    if (!/^0x[a-fA-F0-9]{40}$/.test(token)) {
+      setError("Enter a valid token address");
+      return;
+    }
+    setError(null);
     try {
       if (mode === "operator") {
         await writeContractAsync({
@@ -46,8 +57,8 @@ export const RebalancePanel = () => {
         });
       }
       setAmount("");
-    } catch (e) {
-      console.error("Rebalance failed:", e);
+    } catch (e: any) {
+      setError(e?.shortMessage || e?.message || "Rebalance failed");
     }
   };
 
@@ -129,6 +140,12 @@ export const RebalancePanel = () => {
         {/* Unlock info for permissionless */}
         {mode === "permissionless" && token && (
           <UnlockInfo token={token as `0x${string}`} />
+        )}
+
+        {error && (
+          <div className="alert alert-error mb-4">
+            <span>{error}</span>
+          </div>
         )}
 
         {mode === "operator" && hasCooldown && (

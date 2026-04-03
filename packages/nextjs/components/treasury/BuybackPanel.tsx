@@ -9,6 +9,7 @@ export const BuybackPanel = () => {
   const { address } = useAccount();
   const [inputType, setInputType] = useState<"weth" | "usdc">("weth");
   const [amount, setAmount] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   const { data: isOperator } = useScaffoldReadContract({
     contractName: "TreasuryManagerV2",
@@ -27,6 +28,12 @@ export const BuybackPanel = () => {
 
   const handleBuyback = async () => {
     if (!amount) return;
+    const parsed = Number(amount);
+    if (isNaN(parsed) || parsed <= 0) {
+      setError("Enter a valid positive number");
+      return;
+    }
+    setError(null);
     try {
       if (inputType === "weth") {
         await writeContractAsync({
@@ -40,8 +47,8 @@ export const BuybackPanel = () => {
         });
       }
       setAmount("");
-    } catch (e) {
-      console.error("Buyback failed:", e);
+    } catch (e: any) {
+      setError(e?.shortMessage || e?.message || "Buyback failed");
     }
   };
 
@@ -87,6 +94,12 @@ export const BuybackPanel = () => {
             onChange={e => setAmount(e.target.value)}
           />
         </div>
+
+        {error && (
+          <div className="alert alert-error mb-4">
+            <span>{error}</span>
+          </div>
+        )}
 
         {hasCooldown && (
           <div className="alert alert-warning mb-4">

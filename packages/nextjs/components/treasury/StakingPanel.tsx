@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { formatEther, parseEther } from "viem";
+import { parseEther } from "viem";
 import { useAccount } from "wagmi";
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 
@@ -12,6 +12,7 @@ export const StakingPanel = () => {
   const [selectedPool, setSelectedPool] = useState<number>(0);
   const [stakeAmount, setStakeAmount] = useState("");
   const [activeTab, setActiveTab] = useState<"stake" | "unstake">("stake");
+  const [error, setError] = useState<string | null>(null);
 
   // Check if connected wallet is operator
   const { data: isOperator } = useScaffoldReadContract({
@@ -32,25 +33,32 @@ export const StakingPanel = () => {
 
   const handleStake = async () => {
     if (!stakeAmount) return;
+    const parsed = Number(stakeAmount);
+    if (isNaN(parsed) || parsed <= 0) {
+      setError("Enter a valid positive number");
+      return;
+    }
+    setError(null);
     try {
       await writeStake({
         functionName: "stake",
         args: [parseEther(stakeAmount), BigInt(selectedPool)],
       });
       setStakeAmount("");
-    } catch (e) {
-      console.error("Stake failed:", e);
+    } catch (e: any) {
+      setError(e?.shortMessage || e?.message || "Stake failed");
     }
   };
 
   const handleUnstake = async () => {
+    setError(null);
     try {
       await writeUnstake({
         functionName: "unstake",
         args: [BigInt(selectedPool)],
       });
-    } catch (e) {
-      console.error("Unstake failed:", e);
+    } catch (e: any) {
+      setError(e?.shortMessage || e?.message || "Unstake failed");
     }
   };
 
@@ -98,6 +106,12 @@ export const StakingPanel = () => {
             ))}
           </select>
         </div>
+
+        {error && (
+          <div className="alert alert-error mb-4">
+            <span>{error}</span>
+          </div>
+        )}
 
         {/* Pool info display */}
         <PoolInfo poolId={selectedPool} />
@@ -158,66 +172,14 @@ export const StakingPanel = () => {
 
 // Sub-component for pool info
 const PoolInfo = ({ poolId }: { poolId: number }) => {
-  const { data: poolInfo } = useScaffoldReadContract({
-    contractName: "StakingContract",
-    functionName: "poolInfo",
-    args: [BigInt(poolId)],
-  });
-
-  if (!poolInfo) {
-    return (
-      <div className="bg-base-200 rounded-lg p-3 mb-4 animate-pulse">
-        <div className="h-4 bg-base-300 rounded w-3/4 mb-2"></div>
-        <div className="h-4 bg-base-300 rounded w-1/2"></div>
-      </div>
-    );
-  }
-
-  const [
-    , // stakingToken
-    , // rewardToken
-    , // lastRewardTimestamp
-    , // accRewardPerShare
-    , // startTimestamp
-    endTimestamp,
-    , // precision
-    totalStaked,
-    totalRewards,
-    , // feeCollector
-  ] = poolInfo;
-
-  const totalStakedFormatted = formatEther(totalStaked);
-  const totalRewardsFormatted = formatEther(totalRewards);
-  const endDate = new Date(Number(endTimestamp) * 1000);
-  const isActive = Number(endTimestamp) > Date.now() / 1000;
-
   return (
     <div className="bg-base-200 rounded-lg p-4 mb-4">
-      <div className="grid grid-cols-2 gap-2 text-sm">
-        <div>
-          <span className="text-base-content/60">Total Staked:</span>
-          <p className="font-mono font-semibold">
-            {Number(totalStakedFormatted).toLocaleString(undefined, { maximumFractionDigits: 2 })} ₸USD
-          </p>
-        </div>
-        <div>
-          <span className="text-base-content/60">Total Rewards:</span>
-          <p className="font-mono font-semibold">
-            {Number(totalRewardsFormatted).toLocaleString(undefined, { maximumFractionDigits: 2 })} ₸USD
-          </p>
-        </div>
-        <div>
-          <span className="text-base-content/60">Status:</span>
-          <p>
-            <span className={`badge ${isActive ? "badge-success" : "badge-error"} badge-sm`}>
-              {isActive ? "Active" : "Ended"}
-            </span>
-          </p>
-        </div>
-        <div>
-          <span className="text-base-content/60">End Date:</span>
-          <p className="font-mono text-xs">{endDate.toLocaleDateString()}</p>
-        </div>
+      <div className="text-sm">
+        <span className="text-base-content/60">Selected:</span>
+        <span className="ml-2 font-semibold">Pool {poolId}</span>
+        <p className="text-xs text-base-content/50 mt-1">
+          Staking contract: 0x2a70...89A
+        </p>
       </div>
     </div>
   );
