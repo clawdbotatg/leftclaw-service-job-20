@@ -44,6 +44,19 @@ contract TreasuryManagerV2 {
         Rebalance
     }
 
+    // ======================== REENTRANCY ========================
+
+    uint256 private _reentrancyStatus;
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED = 2;
+
+    modifier nonReentrant() {
+        require(_reentrancyStatus != _ENTERED, "ReentrancyGuard: reentrant call");
+        _reentrancyStatus = _ENTERED;
+        _;
+        _reentrancyStatus = _NOT_ENTERED;
+    }
+
     // ======================== STATE ========================
 
     address public owner;
@@ -147,6 +160,7 @@ contract TreasuryManagerV2 {
         address _chainlinkEthUsd
     ) {
         require(_owner != address(0), "Zero owner");
+        _reentrancyStatus = _NOT_ENTERED;
         owner = _owner;
 
         WETH = _weth;
@@ -207,7 +221,7 @@ contract TreasuryManagerV2 {
         uint256 balance = IERC20(token).balanceOf(address(this));
         require(balance > 0, "No balance");
 
-        IERC20(token).transfer(owner, balance);
+        require(IERC20(token).transfer(owner, balance), "Transfer failed");
         emit DeadPoolTokenRescued(token, balance);
     }
 
@@ -234,7 +248,7 @@ contract TreasuryManagerV2 {
     }
 
     /// @notice Buyback ₸USD with WETH
-    function buybackWithWETH(uint256 amountIn) external onlyOperator operatorCooldown {
+    function buybackWithWETH(uint256 amountIn) external onlyOperator operatorCooldown nonReentrant {
         _checkCaps(ActionType.BuybackWETH, amountIn);
 
         uint256 tusdReceived = SwapHelper.executeBuyback(
@@ -255,7 +269,7 @@ contract TreasuryManagerV2 {
     }
 
     /// @notice Buyback ₸USD with USDC
-    function buybackWithUSDC(uint256 amountIn) external onlyOperator operatorCooldown {
+    function buybackWithUSDC(uint256 amountIn) external onlyOperator operatorCooldown nonReentrant {
         _checkCaps(ActionType.BuybackUSDC, amountIn);
 
         uint256 tusdReceived = SwapHelper.executeBuyback(
@@ -276,17 +290,17 @@ contract TreasuryManagerV2 {
     }
 
     /// @notice Burn ₸USD
-    function burn(uint256 amount) external onlyOperator operatorCooldown {
+    function burn(uint256 amount) external onlyOperator operatorCooldown nonReentrant {
         _checkCaps(ActionType.Burn, amount);
         require(IERC20(TUSD).balanceOf(address(this)) >= amount, "Insufficient TUSD");
 
         // Transfer to dead address for burn
-        IERC20(TUSD).transfer(address(0xdead), amount);
+        require(IERC20(TUSD).transfer(address(0xdead), amount), "Burn transfer failed");
         emit BurnExecuted(amount);
     }
 
     /// @notice Stake ₸USD into staking contract
-    function stake(uint256 amount, uint256 poolNumber) external onlyOperator operatorCooldown {
+    function stake(uint256 amount, uint256 poolNumber) external onlyOperator operatorCooldown nonReentrant {
         _checkCaps(ActionType.Stake, amount);
         require(IERC20(TUSD).balanceOf(address(this)) >= amount, "Insufficient TUSD");
 
@@ -298,7 +312,7 @@ contract TreasuryManagerV2 {
 
     /// @notice Unstake full balance + rewards from staking pool
     /// @dev No caps, no cooldown for unstake
-    function unstake(uint256 poolNumber) external onlyOperator {
+    function unstake(uint256 poolNumber) external onlyOperator nonReentrant {
         // Withdraw 0 to claim rewards, or withdraw full balance
         // The staking contract's withdraw(0, poolId) typically claims rewards
         // We call withdraw with a very large number and let it cap at balance
@@ -308,7 +322,7 @@ contract TreasuryManagerV2 {
     }
 
     /// @notice Buy a registered ERC20 with WETH
-    function buyTokenWithETH(address token, uint256 amount, uint256 poolNumber) external onlyOperator operatorCooldown {
+    function buyTokenWithETH(address token, uint256 amount, uint256 poolNumber) external onlyOperator operatorCooldown nonReentrant {
         // amount = WETH to spend (input amount)
         _checkCaps(ActionType.BuybackWETH, amount); // uses BuybackWETH caps
 
@@ -337,7 +351,7 @@ contract TreasuryManagerV2 {
     }
 
     /// @notice Operator rebalance: Token → WETH → 75% ₸USD + 25% USDC to owner
-    function rebalance(address token, uint256 amount) external onlyOperator operatorCooldown {
+    function rebalance(address token, uint256 amount) external onlyOperator operatorCooldown nonReentrant {
         TokenInfo storage info = tokenInfo[token];
         require(info.registered, "Token not registered");
 
@@ -374,13 +388,24 @@ contract TreasuryManagerV2 {
     // ======================== PERMISSIONLESS FUNCTION ========================
 
     /// @notice Anyone can call — guarantees ₸USD buybacks continue
-    function permissionlessRebalance(address token, uint256 amount) external {
+    function permissionlessRebalance(address token, uint256 amount) external nonReentrant {
         TokenInfo storage info = tokenInfo[token];
         require(info.registered, "Token not registered");
 
         // Check unlock conditions
-        (bool unlocked, uint256 unlockBps) = _getUnlockPercentage(token);
+        (bool unlocked, uint256 unlockBps, bool p3ShouldTrigger, bool p3ShouldDrip, uint256 p3Bps) =
+            _getUnlockPercentageDetailed(token);
         require(unlocked, "Not unlocked");
+
+        // Update Path3 emergency state if applicable
+        if (p3ShouldTrigger) {
+            path3Triggered[token] = true;
+            path3UnlockedPercentage[token] = p3Bps;
+            path3LastDripTimestamp[token] = block.timestamp;
+        } else if (p3ShouldDrip) {
+            path3UnlockedPercentage[token] = p3Bps;
+            path3LastDripTimestamp[token] = block.timestamp;
+        }
 
         // Max 5% of unlocked per tx
         uint256 currentBalance = IERC20(token).balanceOf(address(this));
@@ -517,6 +542,14 @@ contract TreasuryManagerV2 {
     }
 
     function _getUnlockPercentage(address token) internal view returns (bool unlocked, uint256 unlockBps) {
+        (unlocked, unlockBps,,,) = _getUnlockPercentageDetailed(token);
+    }
+
+    function _getUnlockPercentageDetailed(address token)
+        internal
+        view
+        returns (bool unlocked, uint256 unlockBps, bool p3ShouldTrigger, bool p3ShouldDrip, uint256 p3Bps)
+    {
         TokenInfo storage info = tokenInfo[token];
 
         // Path 1: ROI-based
@@ -550,7 +583,8 @@ contract TreasuryManagerV2 {
         );
 
         // Path 3: Emergency
-        (bool p3Unlocked, uint256 p3Bps,,) = PermissionlessModule.checkPath3Emergency(
+        bool p3Unlocked;
+        (p3Unlocked, p3Bps, p3ShouldTrigger, p3ShouldDrip) = PermissionlessModule.checkPath3Emergency(
             PermissionlessModule.Path3Params({
                 path3Triggered: path3Triggered[token],
                 path3UnlockedPercentage: path3UnlockedPercentage[token],

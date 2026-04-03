@@ -5,6 +5,1295 @@
 import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 
 const deployedContracts = {
+  8453: {
+    TreasuryManagerV2: {
+      address: "0x8130e8610059ffdea57eda61d258d57800712dd4",
+      abi: [
+        {
+          type: "constructor",
+          inputs: [
+            {
+              name: "_owner",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_weth",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_usdc",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_tusd",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_stakingContract",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_universalRouter",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_poolManager",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_tusdPool",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_usdcWethPool",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_chainlinkEthUsd",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "receive",
+          stateMutability: "payable",
+        },
+        {
+          type: "function",
+          name: "CHAINLINK_ETH_USD",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "CIRCUIT_BREAKER_BPS",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "DEAD_POOL_THRESHOLD",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "MAX_PERCENT_PER_SWAP_BPS",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "OPERATOR_COOLDOWN",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "OPERATOR_INACTIVITY_PERIOD",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "PERMISSIONLESS_COOLDOWN",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "PERMISSIONLESS_ETH_PER_ACTION",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "PERMISSIONLESS_ETH_PER_DAY",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "POOL_MANAGER",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "ROLLING_WINDOW",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "SLIPPAGE_BPS",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "STAKING_CONTRACT",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "TUSD",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "TUSD_POOL",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "UNIVERSAL_ROUTER",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "USDC",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "USDC_WETH_POOL",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "WETH",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "burn",
+          inputs: [
+            {
+              name: "amount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "buyTokenWithETH",
+          inputs: [
+            {
+              name: "token",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "poolNumber",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "buybackWithUSDC",
+          inputs: [
+            {
+              name: "amountIn",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "buybackWithWETH",
+          inputs: [
+            {
+              name: "amountIn",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "getCooldownRemaining",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getOperatorCaps",
+          inputs: [
+            {
+              name: "actionType",
+              type: "uint8",
+              internalType: "enum TreasuryManagerV2.ActionType",
+            },
+          ],
+          outputs: [
+            {
+              name: "perAction",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "perDay",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getOperatorDailyUsed",
+          inputs: [
+            {
+              name: "op",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "actionType",
+              type: "uint8",
+              internalType: "enum TreasuryManagerV2.ActionType",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getOperatorDayStart",
+          inputs: [
+            {
+              name: "op",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getRegisteredTokens",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address[]",
+              internalType: "address[]",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getTokenInfo",
+          inputs: [
+            {
+              name: "token",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "totalWeiSpent",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "totalTokensReceived",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "initialBalanceSnapshot",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "poolAddress",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "isV4",
+              type: "bool",
+              internalType: "bool",
+            },
+            {
+              name: "lastRebalance",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "registered",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getUnlockPercentage",
+          inputs: [
+            {
+              name: "token",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "unlocked",
+              type: "bool",
+              internalType: "bool",
+            },
+            {
+              name: "unlockBps",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "isOperator",
+          inputs: [
+            {
+              name: "account",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "lastOperatorActionTime",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "operator",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "operatorCaps",
+          inputs: [
+            {
+              name: "",
+              type: "uint8",
+              internalType: "enum TreasuryManagerV2.ActionType",
+            },
+          ],
+          outputs: [
+            {
+              name: "perAction",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "perDay",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "operatorDailyUsed",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "",
+              type: "uint8",
+              internalType: "enum TreasuryManagerV2.ActionType",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "operatorDayStart",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "operatorSlippageBps",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "owner",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "path3LastDripTimestamp",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "path3Triggered",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "path3UnlockedPercentage",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "permissionlessDailyUsed",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "permissionlessDayStart",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "permissionlessRebalance",
+          inputs: [
+            {
+              name: "token",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "rebalance",
+          inputs: [
+            {
+              name: "token",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "registerToken",
+          inputs: [
+            {
+              name: "token",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "poolAddress",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "v4PoolId",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "isV4",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "registeredTokens",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "rescueDeadPoolToken",
+          inputs: [
+            {
+              name: "token",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "setOperator",
+          inputs: [
+            {
+              name: "_operator",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "setSlippage",
+          inputs: [
+            {
+              name: "bps",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "stake",
+          inputs: [
+            {
+              name: "amount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "poolNumber",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "tokenInfo",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "totalWeiSpent",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "totalTokensReceived",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "initialBalanceSnapshot",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "poolAddress",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "v4PoolId",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "isV4",
+              type: "bool",
+              internalType: "bool",
+            },
+            {
+              name: "lastMeaningfulRebalanceTimestamp",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "lastPermissionlessCooldown",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "registered",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "transferOwnership",
+          inputs: [
+            {
+              name: "newOwner",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "unstake",
+          inputs: [
+            {
+              name: "poolNumber",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "updateCaps",
+          inputs: [
+            {
+              name: "actionType",
+              type: "uint8",
+              internalType: "enum TreasuryManagerV2.ActionType",
+            },
+            {
+              name: "perAction",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "perDay",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "event",
+          name: "BurnExecuted",
+          inputs: [
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "BuybackExecuted",
+          inputs: [
+            {
+              name: "inputToken",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "amountIn",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "tusdReceived",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "CapsUpdated",
+          inputs: [
+            {
+              name: "actionType",
+              type: "uint8",
+              indexed: true,
+              internalType: "enum TreasuryManagerV2.ActionType",
+            },
+            {
+              name: "perAction",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "perDay",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "DeadPoolTokenRescued",
+          inputs: [
+            {
+              name: "token",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "OperatorSet",
+          inputs: [
+            {
+              name: "newOperator",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "OwnershipTransferred",
+          inputs: [
+            {
+              name: "previousOwner",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "newOwner",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "PermissionlessRebalanceExecuted",
+          inputs: [
+            {
+              name: "caller",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "token",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "wethReceived",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "usdcToOwner",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "tusdBought",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "RebalanceExecuted",
+          inputs: [
+            {
+              name: "token",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "wethReceived",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "usdcToOwner",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "tusdBought",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "SlippageUpdated",
+          inputs: [
+            {
+              name: "newSlippageBps",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "StakeExecuted",
+          inputs: [
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "poolNumber",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "TokenBought",
+          inputs: [
+            {
+              name: "token",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "wethSpent",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "tokensReceived",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "UnstakeExecuted",
+          inputs: [
+            {
+              name: "poolNumber",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+      ],
+      inheritedFunctions: {},
+      deployedOnBlock: 44232250,
+    },
+  },
   31337: {
     TreasuryManagerV2: {
       address: "0x6c7a2c02f2b9a7b9ac30df8334a56daae5a84531",

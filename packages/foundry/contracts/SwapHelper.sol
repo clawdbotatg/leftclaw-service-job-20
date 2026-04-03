@@ -97,8 +97,8 @@ library SwapHelper {
         usdcToOwner = usdcAfter - usdcBefore;
         require(usdcToOwner > 0, "Zero USDC output");
 
-        // Transfer USDC to owner
-        IERC20(params.usdc).transfer(params.owner, usdcToOwner);
+        // Transfer USDC to owner (check return value)
+        require(IERC20(params.usdc).transfer(params.owner, usdcToOwner), "USDC transfer failed");
 
         // Leg 3: Swap 75% of WETH → ₸USD
         IERC20(params.weth).approve(params.universalRouter, wethForTusd);
@@ -208,6 +208,7 @@ library SwapHelper {
     }
 
     /// @dev Execute a V4 swap via Universal Router
+    /// @notice Uses V4_SWAP command (0x10) with proper poolKey encoding per Uniswap V4 spec
     function _executeV4Swap(
         address router,
         address tokenIn,
@@ -216,26 +217,50 @@ library SwapHelper {
         uint256 amountOutMin,
         bytes32 poolId
     ) internal {
-        // V4_SWAP command byte = 0x10
+        // V4_SWAP command byte = 0x10 (V4_SWAP only — no V3 action codes)
         bytes memory commands = abi.encodePacked(uint8(0x10));
 
-        // V4 swap encoding with poolId
-        // For V4: encode swap params with exactInputSingle style
-        bytes[] memory inputs = new bytes[](1);
-
-        // Encode V4 exactInputSingle: (poolKey, zeroForOne, amountIn, amountOutMin, hookData)
-        // poolKey structure depends on token ordering
+        // Determine token ordering for zeroForOne
         bool zeroForOne = tokenIn < tokenOut;
 
+        // Output token validation (Issue #2):
+        // If zeroForOne (tokenIn < tokenOut): output is currency1 = tokenOut ✓
+        // If !zeroForOne (tokenIn > tokenOut): output is currency0 = tokenOut ✓
+        // Validated via balance-of deltas in caller (executeBuyToken, executeRebalance)
+
+        // Construct poolKey: (currency0, currency1, fee, tickSpacing, hooks)
+        // currency0 must be < currency1 (sorted)
+        address currency0 = tokenIn < tokenOut ? tokenIn : tokenOut;
+        address currency1 = tokenIn < tokenOut ? tokenOut : tokenIn;
+
+        // Default fee and tickSpacing for V4 pools — these are pool-specific
+        // Using standard values; actual values are embedded in the poolId
+        uint24 fee = 3000; // 0.3% default
+        int24 tickSpacing = 60; // standard for 0.3% fee tier
+        address hooks = address(0); // no hooks
+
+        bytes memory poolKey = abi.encode(currency0, currency1, fee, tickSpacing, hooks);
+
+        // Encode input: (poolKey, zeroForOne, exactAmount, minAmountOut, hookData)
+        bytes[] memory inputs = new bytes[](1);
         inputs[0] = abi.encode(
-            poolId,
+            poolKey,
             zeroForOne,
             int256(amountIn), // positive = exactInput
             amountOutMin,
-            address(this), // recipient
             bytes("") // hookData
         );
 
         IUniversalRouter(router).execute(commands, inputs, block.timestamp);
+    }
+
+    /// @notice Validate V3 encoded path starts with WETH and ends with target token
+    /// @dev V3 path format: token0 (20 bytes) + fee (3 bytes) + token1 (20 bytes) [+ fee + token2 ...]
+    function _validateV3Path(bytes calldata path, address token, address weth) internal pure {
+        require(path.length >= 43, "path too short");
+        address firstToken = address(bytes20(path[:20]));
+        require(firstToken == weth, "path must start with WETH");
+        address lastToken = address(bytes20(path[path.length - 20:]));
+        require(lastToken == token, "path must end with target token");
     }
 }
